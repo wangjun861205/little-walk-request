@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'little-walk-request'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=little-walk-request",
+                    "--package=little-walk-request"
+                ],
+                "filter": {
+                    "name": "little-walk-request",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'little-walk-request'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=little-walk-request",
+                    "--package=little-walk-request"
+                ],
+                "filter": {
+                    "name": "little-walk-request",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
