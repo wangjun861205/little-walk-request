@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use nb_field_names::FieldNames;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize, FieldNames)]
+#[derive(Debug, Deserialize, Serialize, FieldNames, Default)]
 pub struct WalkRequest {
     pub id: String,
     pub dog_ids: Vec<String>,

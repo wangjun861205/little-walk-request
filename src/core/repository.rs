@@ -62,7 +62,7 @@ pub trait Repository {
     async fn create_walk_request(&self, request: WalkRequestCreate) -> Result<String, Error>;
     async fn update_walk_request(&self, id: &str, request: WalkRequestUpdate)
         -> Result<u64, Error>;
-    async fn get_walk_request(&self, request: WalkRequestQuery) -> Result<WalkRequest, Error>;
+    async fn get_walk_request(&self, id: &str) -> Result<WalkRequest, Error>;
     async fn query_walk_requests(
         &self,
         query: WalkRequestQuery,
