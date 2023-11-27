@@ -27,8 +27,8 @@ where
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NearbyWalkRequestsParams {
-    pub lat: f64,
-    pub lon: f64,
+    pub latitude: f64,
+    pub longitude: f64,
     pub radius: f64,
     pub page: i64,
     pub size: i64,
@@ -43,8 +43,8 @@ where
 {
     let walk_requests = service
         .nearby_walk_requests(
-            params.lat,
-            params.lon,
+            params.latitude,
+            params.longitude,
             params.radius,
             Pagination::new(params.page, params.size),
         )

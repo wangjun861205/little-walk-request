@@ -18,8 +18,8 @@ use repositories::mongodb::Mongodb;
 
 #[derive(FromEnvDerive)]
 pub struct Config {
-    pub listen_addr: String,
-    pub db_url: String,
+    pub listen_address: String,
+    pub database_url: String,
     pub database_name: String,
     #[env_default("info")]
     pub log_level: String,
@@ -32,7 +32,7 @@ async fn main() -> io::Result<()> {
     dotenv().ok();
     let config = Config::from_env();
     env_logger::init_from_env(env_logger::Env::default().default_filter_or(config.log_level));
-    let db = Client::with_uri_str(&config.db_url)
+    let db = Client::with_uri_str(&config.database_url)
         .await
         .expect("failed to connect to mongodb")
         .database(&config.database_name);
@@ -52,7 +52,7 @@ async fn main() -> io::Result<()> {
                     ),
             )
     })
-    .bind(config.listen_addr)
+    .bind(config.listen_address)
     .expect("Can't bind to address")
     .run()
     .await

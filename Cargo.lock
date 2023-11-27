@@ -1208,6 +1208,8 @@ dependencies = [
 [[package]]
 name = "nb-field-names"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb83e48080a1e86ffcc91fc34b818591c82f34db66bed9dff6798d746a864be5"
 dependencies = [
  "proc-macro2",
  "quote",

@@ -11,7 +11,7 @@ chrono = { version = "0.4.31", features = ["serde"] }
 futures = "0.3.29"
 mongodb = { version = "2.7.1", features = ["bson-chrono-0_4"] }
 serde = { version = "1.0.193", features = ["derive"] }
-nb-field-names = { path = "../nb-field-names" }
+nb-field-names = "*"
 actix-web = "4.4.0"
 nb-from-env = "0.2.1"
 dotenv = "0.15.0"

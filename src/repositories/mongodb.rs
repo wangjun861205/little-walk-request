@@ -1,5 +1,9 @@
 use mongodb::bson::Document;
-use mongodb::{bson::doc, options::FindOptions, Database};
+use mongodb::{
+    bson::doc,
+    options::{FindOneOptions, FindOptions},
+    Database,
+};
 
 use crate::core::entities::WalkRequest;
 use crate::core::repository::{Order, Pagination, Repository, SortBy};
@@ -31,8 +35,7 @@ impl Repository for Mongodb {
                     "should_start_before": request.should_start_before,
                     "should_end_before": request.should_end_before,
                     "should_end_after": request.should_end_after,
-                    "latitude": request.latitude,
-                    "longitude": request.longitude,
+                    "location": { "type": "Point", "coordinates": [request.longitude, request.latitude] },
                     "created_at": Utc::now(),
                     "updated_at": Utc::now(),
                 },
@@ -54,14 +57,34 @@ impl Repository for Mongodb {
             if nearby.len() != 3 {
                 return Err(Error::msg("nearby query must be of length 3"));
             }
-            q.insert("latitude", doc! {"$near": { "$geometry": { "type": "Point", "coordinates": [nearby[0], nearby[1]] }, "$maxDistance": nearby[2]}});
+            q.insert("location", doc! {"$near": { "$geometry": { "type": "Point", "coordinates": [nearby[0], nearby[1]] }, "$maxDistance": nearby[2]}});
         }
         if let Some(accepted_by) = query.accepted_by {
             q.insert("accepted_by", accepted_by);
         }
         self.db
             .collection::<WalkRequest>("walk_requests")
-            .find_one(q, None)
+            .find_one(
+                q,
+                FindOneOptions::builder()
+                    .projection(doc! {
+                        "id": {"$toString": "$_id"},
+                        "dog_ids": "$dog_ids",
+                        "should_start_after": {"$dateToString": { "date": "$should_start_after", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "should_start_before": { "$dateToString": { "date": "$should_start_before", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "should_end_after": { "$dateToString": { "date": "$should_end_after", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "should_end_before": { "$dateToString":  { "date": "$should_end_before", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "longitude": { "$arrayElemAt": [ "$location.coordinates", 0]},
+                        "latitude": { "$arrayElemAt": [ "$location.coordinates", 1]},
+                        "accepted_by": "$accepted_by",
+                        "accepted_at": {"$dateToString": { "date": "$accepted_at", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "started_at": {"$dateToString": { "date": "$started_at", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "finished_at": {"$dateToString": { "date": "$finished_at", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "created_at": { "$dateToString":  { "date": "$created_at", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "updated_at": { "$dateToString":  { "date": "$updated_at", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                    })
+                    .build(),
+            )
             .await?
             .ok_or(Error::msg("walk request not found"))
     }
@@ -83,7 +106,7 @@ impl Repository for Mongodb {
             if nearby.len() != 3 {
                 return Err(Error::msg("nearby query must be of length 3"));
             }
-            q.insert("latitude", doc! {"$near": { "$geometry": { "type": "Point", "coordinates": [nearby[0], nearby[1]] }, "$maxDistance": nearby[2]}});
+            q.insert("location", doc! {"$near": { "$geometry": { "type": "Point", "coordinates": [nearby[0], nearby[1]] }, "$maxDistance": nearby[2]}});
         }
         if let Some(accepted_by) = query.accepted_by {
             q.insert("accepted_by", accepted_by);
@@ -96,16 +119,18 @@ impl Repository for Mongodb {
                     .projection(doc! {
                         "id": {"$toString": "$_id"},
                         "dog_ids": "$dog_ids",
-                        "should_start_after": "$should_start_after",
-                        "should_start_before": "$should_start_before",
-                        "should_end_before": "$should_end_before",
-                        "latitude": "$latitude",
-                        "longitude": "$longitude",
+                        "should_start_after": {"$dateToString": { "date": "$should_start_after", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "should_start_before": { "$dateToString": { "date": "$should_start_before", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "should_end_after": { "$dateToString": { "date": "$should_end_after", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "should_end_before": { "$dateToString":  { "date": "$should_end_before", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "longitude": { "$arrayElemAt": [ "$location.coordinates", 0]},
+                        "latitude": { "$arrayElemAt": [ "$location.coordinates", 1]},
                         "accepted_by": "$accepted_by",
-                        "accepted_at": "$accepted_at",
-                        "finished_at": "$finished_at",
-                        "created_at": "$created_at",
-                        "updated_at": "$updated_at",
+                        "accepted_at": {"$dateToString": { "date": "$accepted_at", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "started_at": {"$dateToString": { "date": "$started_at", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "finished_at": {"$dateToString": { "date": "$finished_at", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "created_at": { "$dateToString":  { "date": "$created_at", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
+                        "updated_at": { "$dateToString":  { "date": "$updated_at", "format": "%Y-%m-%dT%H:%M:%S.%L%z"}},
                     })
                     .limit(pagination.as_ref().map(|p| p.size))
                     .skip(
