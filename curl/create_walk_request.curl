@@ -1,0 +1,4 @@
+url=http://localhost:8005/walk_requests
+request=POST
+header=Content-Type:application/json
+data=@create_walk_request.json

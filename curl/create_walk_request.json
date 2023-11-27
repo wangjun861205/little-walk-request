@@ -1,0 +1,9 @@
+{
+	"dog_ids": ["1", "2", "3"],
+	"should_start_after": "2023-11-27T15:00:00Z",
+	"should_start_before": "2023-11-27T15:30:00Z",
+	"should_end_after": "2023-11-27T16:00:00Z",
+	"should_end_before": "2023-11-27T16:30:00Z",
+	"longitude": 117.00431608470875,
+	"latitude": 36.66179576496898
+}
