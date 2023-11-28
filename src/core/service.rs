@@ -1,8 +1,11 @@
+use std::default;
+
 use super::{
     entities::WalkRequest,
-    repository::{Pagination, Repository, WalkRequestCreate, WalkRequestQuery},
+    repository::{Pagination, Repository, WalkRequestCreate, WalkRequestQuery, WalkRequestUpdate},
 };
 use anyhow::Error;
+use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone)]
 pub struct Service<R>
@@ -48,6 +51,51 @@ where
                 },
                 None,
                 Some(pagination),
+            )
+            .await
+    }
+
+    pub async fn accept_request(&self, request_id: &str, user_id: &str) -> Result<u64, Error> {
+        self.repository
+            .update_walk_requests_by_query(
+                WalkRequestQuery {
+                    id: Some(request_id.to_owned()),
+                    ..Default::default()
+                },
+                WalkRequestUpdate {
+                    add_to_acceptances: Some(vec![user_id.to_owned()]),
+                    ..Default::default()
+                },
+            )
+            .await
+    }
+
+    pub async fn assign_accepter(&self, request_id: &str, user_id: &str) -> Result<u64, Error> {
+        self.repository
+            .update_walk_requests_by_query(
+                WalkRequestQuery {
+                    id: Some(request_id.to_owned()),
+                    acceptances_includes_all: Some(vec![user_id.to_owned()]),
+                    ..Default::default()
+                },
+                WalkRequestUpdate {
+                    accepted_by: Some(user_id.to_owned()),
+                    accepted_at: Some(Utc::now()),
+                    ..Default::default()
+                },
+            )
+            .await
+    }
+
+    pub async fn dismiss_aceepter(&self, request_id: &str) -> Result<u64, Error> {
+        self.repository
+            .update_walk_request(
+                request_id,
+                WalkRequestUpdate {
+                    unset_accepted_by: true,
+                    unset_accepted_at: true,
+                    ..Default::default()
+                },
             )
             .await
     }

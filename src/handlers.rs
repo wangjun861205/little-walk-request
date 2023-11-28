@@ -1,7 +1,7 @@
 use actix_web::{
-    error::ErrorInternalServerError,
-    web::{Data, Json, Query},
-    HttpResponse, Result,
+    error::{ErrorBadRequest, ErrorInternalServerError, ErrorTooManyRequests, ErrorUnauthorized},
+    web::{Data, Json, Path, Query},
+    HttpRequest, HttpResponse, Result,
 };
 
 use crate::core::{
@@ -51,4 +51,29 @@ where
         .await
         .map_err(ErrorInternalServerError)?;
     Ok(HttpResponse::Ok().json(walk_requests))
+}
+
+pub(crate) async fn accept_request<R>(
+    service: Data<Service<R>>,
+    path: Path<(String,)>,
+    req: HttpRequest,
+) -> Result<HttpResponse>
+where
+    R: Repository + Clone,
+{
+    let user_id = req
+        .headers()
+        .get("X-User-ID")
+        .ok_or(ErrorUnauthorized("无权限"))?
+        .to_str()
+        .map_err(ErrorUnauthorized)?;
+    if service
+        .accept_request(path.0.clone().as_str(), user_id)
+        .await
+        .map_err(ErrorInternalServerError)?
+        == 0
+    {
+        return Err(ErrorBadRequest("请求不存在或已接受该请求"));
+    }
+    Ok(HttpResponse::Ok().finish())
 }

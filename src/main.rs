@@ -12,6 +12,7 @@ use actix_web::{
 };
 use dotenv::dotenv;
 use futures::io;
+use handlers::accept_request;
 use mongodb::Client;
 use nb_from_env::{FromEnv, FromEnvDerive};
 use repositories::mongodb::Mongodb;
@@ -49,7 +50,8 @@ async fn main() -> io::Result<()> {
                     .route(
                         "nearby",
                         get().to(handlers::nearby_walk_requests::<Mongodb>),
-                    ),
+                    )
+                    .route("/{id}/acceptances", post().to(accept_request::<Mongodb>)),
             )
     })
     .bind(config.listen_address)

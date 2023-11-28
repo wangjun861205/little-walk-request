@@ -13,10 +13,13 @@ pub struct WalkRequest {
     pub latitude: f64,
     pub longitude: f64,
     pub distance: Option<f64>,
+    pub canceled_at: Option<DateTime<Utc>>,
     pub accepted_by: Option<String>,
     pub accepted_at: Option<DateTime<Utc>>,
     pub started_at: Option<DateTime<Utc>>,
     pub finished_at: Option<DateTime<Utc>>,
+    pub status: String,
+    pub acceptances: Option<Vec<String>>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
