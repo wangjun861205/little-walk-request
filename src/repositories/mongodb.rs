@@ -64,6 +64,12 @@ impl TryFrom<WalkRequestQuery> for Document {
         if let Some(accepted_by) = value.accepted_by {
             q.insert("accepted_by", accepted_by);
         }
+        if let Some(accepted_by_neq) = value.accepted_by_neq {
+            q.insert("accepted_by", doc! {"$ne": accepted_by_neq });
+        }
+        if value.accepted_by_is_null {
+            q.insert("accepted_by", doc! {"$eq": null});
+        }
         if let Some(acceptances_includes_all) = value.acceptances_includes_all {
             q.insert("acceptances", doc! {"$all": acceptances_includes_all });
         }
@@ -123,10 +129,11 @@ impl From<WalkRequestUpdate> for Document {
             set.insert("should_end_after", should_end_after);
         }
         if let Some(add_to_acceptances) = update.add_to_acceptances {
-            set.insert(
-                "$addToSet",
-                doc! {"acceptances": {"$each": add_to_acceptances}},
-            );
+            set.insert("$addToSet", doc! {"acceptances": add_to_acceptances});
+        }
+        let mut pull = doc! {};
+        if let Some(remove_from_acceptances) = update.remove_from_acceptances {
+            pull.insert("acceptances", remove_from_acceptances);
         }
         let mut unset = doc! {};
         if update.unset_accepted_by {
@@ -135,7 +142,7 @@ impl From<WalkRequestUpdate> for Document {
         if update.unset_accepted_at {
             unset.insert("accepted_at", "");
         }
-        doc! {"$set": set, "$unset": unset}
+        doc! {"$set": set, "$unset": unset, "$pull": pull}
     }
 }
 
@@ -256,7 +263,7 @@ impl Repository for Mongodb {
             .db
             .collection::<Document>("walk_requests")
             .update_one(
-                doc! {"_id": {"$toObjectId": id}},
+                doc! {"_id": ObjectId::from_str(id)?},
                 Document::from(request),
                 None,
             )

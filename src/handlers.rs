@@ -53,7 +53,7 @@ where
     Ok(HttpResponse::Ok().json(walk_requests))
 }
 
-pub(crate) async fn accept_request<R>(
+pub(crate) async fn add_acceptance<R>(
     service: Data<Service<R>>,
     path: Path<(String,)>,
     req: HttpRequest,
@@ -67,13 +67,100 @@ where
         .ok_or(ErrorUnauthorized("无权限"))?
         .to_str()
         .map_err(ErrorUnauthorized)?;
-    if service
-        .accept_request(path.0.clone().as_str(), user_id)
+    service
+        .add_acceptance(path.0.as_str(), user_id)
         .await
-        .map_err(ErrorInternalServerError)?
-        == 0
-    {
-        return Err(ErrorBadRequest("请求不存在或已接受该请求"));
-    }
-    Ok(HttpResponse::Ok().finish())
+        .map_err(ErrorInternalServerError)
+        .map(|_| HttpResponse::Ok().finish())
+}
+
+pub(crate) async fn remove_acceptance<R>(
+    service: Data<Service<R>>,
+    path: Path<(String,)>,
+    req: HttpRequest,
+) -> Result<HttpResponse>
+where
+    R: Repository + Clone,
+{
+    let user_id = req
+        .headers()
+        .get("X-User-ID")
+        .ok_or(ErrorUnauthorized("无权限"))?
+        .to_str()
+        .map_err(ErrorUnauthorized)?;
+    service
+        .remove_acceptance(path.0.as_str(), user_id)
+        .await
+        .map_err(ErrorInternalServerError)
+        .map(|_| HttpResponse::Ok().finish())
+}
+
+pub(crate) async fn assign_accepter<R>(
+    service: Data<Service<R>>,
+    path: Path<(String, String)>,
+) -> Result<HttpResponse>
+where
+    R: Repository + Clone,
+{
+    service
+        .assign_accepter(path.0.as_str(), path.1.as_str())
+        .await
+        .map_err(ErrorInternalServerError)
+        .map(|_| HttpResponse::Ok().finish())
+}
+
+pub(crate) async fn dismiss_accepter<R>(
+    service: Data<Service<R>>,
+    path: Path<(String, String)>,
+) -> Result<HttpResponse>
+where
+    R: Repository + Clone,
+{
+    service
+        .dismiss_accepter(path.0.as_str(), path.1.as_str())
+        .await
+        .map_err(ErrorInternalServerError)
+        .map(|_| HttpResponse::Ok().finish())
+}
+
+pub(crate) async fn resign_acceptance<R>(
+    service: Data<Service<R>>,
+    path: Path<(String, String)>,
+) -> Result<HttpResponse>
+where
+    R: Repository + Clone,
+{
+    service
+        .resign_acceptance(path.0.as_str(), path.1.as_str())
+        .await
+        .map_err(ErrorInternalServerError)
+        .map(|_| HttpResponse::Ok().finish())
+}
+
+pub(crate) async fn cancel_accepted_request<R>(
+    service: Data<Service<R>>,
+    path: Path<(String, String)>,
+) -> Result<HttpResponse>
+where
+    R: Repository + Clone,
+{
+    service
+        .cancel_accepted_request(path.0.as_str(), path.1.as_str())
+        .await
+        .map_err(ErrorInternalServerError)
+        .map(|_| HttpResponse::Ok().finish())
+}
+
+pub(crate) async fn cancel_unaccepted_request<R>(
+    service: Data<Service<R>>,
+    path: Path<(String,)>,
+) -> Result<HttpResponse>
+where
+    R: Repository + Clone,
+{
+    service
+        .cancel_unaccepted_request(path.0.as_str())
+        .await
+        .map_err(ErrorInternalServerError)
+        .map(|_| HttpResponse::Ok().finish())
 }

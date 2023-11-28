@@ -25,9 +25,11 @@ pub struct WalkRequestUpdate {
     pub longitude: Option<f64>,
     pub accepted_by: Option<String>,
     pub accepted_at: Option<DateTime<Utc>>,
+    pub canceled_at: Option<DateTime<Utc>>,
     pub unset_accepted_by: bool,
     pub unset_accepted_at: bool,
-    pub add_to_acceptances: Option<Vec<String>>,
+    pub add_to_acceptances: Option<String>,
+    pub remove_from_acceptances: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -37,6 +39,8 @@ pub struct WalkRequestQuery {
     pub dog_ids_includes_any: Option<Vec<String>>,
     pub nearby: Option<Vec<f64>>,
     pub accepted_by: Option<String>,
+    pub accepted_by_neq: Option<String>,
+    pub accepted_by_is_null: bool,
     pub acceptances_includes_all: Option<Vec<String>>,
     pub acceptances_includes_any: Option<Vec<String>>,
 }

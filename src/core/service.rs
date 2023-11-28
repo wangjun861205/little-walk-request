@@ -55,7 +55,7 @@ where
             .await
     }
 
-    pub async fn accept_request(&self, request_id: &str, user_id: &str) -> Result<u64, Error> {
+    pub async fn add_acceptance(&self, request_id: &str, user_id: &str) -> Result<(), Error> {
         self.repository
             .update_walk_requests_by_query(
                 WalkRequestQuery {
@@ -63,18 +63,49 @@ where
                     ..Default::default()
                 },
                 WalkRequestUpdate {
-                    add_to_acceptances: Some(vec![user_id.to_owned()]),
+                    add_to_acceptances: Some(user_id.to_owned()),
                     ..Default::default()
                 },
             )
             .await
+            .and_then(|n| {
+                if n == 1 {
+                    Ok(())
+                } else {
+                    Err(Error::msg("请求不存在"))
+                }
+            })
     }
 
-    pub async fn assign_accepter(&self, request_id: &str, user_id: &str) -> Result<u64, Error> {
+    pub async fn remove_acceptance(&self, request_id: &str, user_id: &str) -> Result<(), Error> {
         self.repository
             .update_walk_requests_by_query(
                 WalkRequestQuery {
                     id: Some(request_id.to_owned()),
+                    accepted_by_neq: Some(user_id.to_owned()),
+                    ..Default::default()
+                },
+                WalkRequestUpdate {
+                    remove_from_acceptances: Some(user_id.to_owned()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .and_then(|n| {
+                if n == 1 {
+                    Ok(())
+                } else {
+                    Err(Error::msg("请求不存在或狗狗主人已通过请求"))
+                }
+            })
+    }
+
+    pub async fn assign_accepter(&self, request_id: &str, user_id: &str) -> Result<(), Error> {
+        self.repository
+            .update_walk_requests_by_query(
+                WalkRequestQuery {
+                    id: Some(request_id.to_owned()),
+                    accepted_by_is_null: true,
                     acceptances_includes_all: Some(vec![user_id.to_owned()]),
                     ..Default::default()
                 },
@@ -85,12 +116,23 @@ where
                 },
             )
             .await
+            .and_then(|n| {
+                if n == 1 {
+                    Ok(())
+                } else {
+                    Err(Error::msg("请求不存在或该用户已取消报名"))
+                }
+            })
     }
 
-    pub async fn dismiss_aceepter(&self, request_id: &str) -> Result<u64, Error> {
+    pub async fn dismiss_accepter(&self, request_id: &str, user_id: &str) -> Result<(), Error> {
         self.repository
-            .update_walk_request(
-                request_id,
+            .update_walk_requests_by_query(
+                WalkRequestQuery {
+                    id: Some(request_id.to_owned()),
+                    accepted_by: Some(user_id.to_owned()),
+                    ..Default::default()
+                },
                 WalkRequestUpdate {
                     unset_accepted_by: true,
                     unset_accepted_at: true,
@@ -98,5 +140,87 @@ where
                 },
             )
             .await
+            .and_then(|n| {
+                if n == 1 {
+                    Ok(())
+                } else {
+                    Err(Error::msg("请求不存在或该用户已取消报名"))
+                }
+            })
+    }
+
+    pub async fn cancel_unaccepted_request(&self, request_id: &str) -> Result<(), Error> {
+        self.repository
+            .update_walk_requests_by_query(
+                WalkRequestQuery {
+                    id: Some(request_id.to_owned()),
+                    accepted_by_is_null: true,
+                    ..Default::default()
+                },
+                WalkRequestUpdate {
+                    canceled_at: Some(Utc::now()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .and_then(|n| {
+                if n == 1 {
+                    Ok(())
+                } else {
+                    Err(Error::msg("请求不存在"))
+                }
+            })
+    }
+
+    pub async fn cancel_accepted_request(
+        &self,
+        request_id: &str,
+        user_id: &str,
+    ) -> Result<(), Error> {
+        self.repository
+            .update_walk_requests_by_query(
+                WalkRequestQuery {
+                    id: Some(request_id.to_owned()),
+                    accepted_by: Some(user_id.to_owned()),
+                    ..Default::default()
+                },
+                WalkRequestUpdate {
+                    canceled_at: Some(Utc::now()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .and_then(|n| {
+                if n == 1 {
+                    Ok(())
+                } else {
+                    Err(Error::msg("请求不存在"))
+                }
+            })
+    }
+
+    pub async fn resign_acceptance(&self, request_id: &str, user_id: &str) -> Result<(), Error> {
+        self.repository
+            .update_walk_requests_by_query(
+                WalkRequestQuery {
+                    id: Some(request_id.to_owned()),
+                    accepted_by: Some(user_id.to_owned()),
+                    ..Default::default()
+                },
+                WalkRequestUpdate {
+                    unset_accepted_by: true,
+                    unset_accepted_at: true,
+                    remove_from_acceptances: Some(user_id.to_owned()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .and_then(|n| {
+                if n == 1 {
+                    Ok(())
+                } else {
+                    Err(Error::msg("请求不存在或已被狗狗主人取消"))
+                }
+            })
     }
 }

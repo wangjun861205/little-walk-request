@@ -7,12 +7,15 @@ pub mod repositories;
 use crate::core::service::Service;
 use actix_web::{
     middleware::Logger,
-    web::{get, post, scope, Data},
+    web::{delete, get, post, put, scope, Data},
     App, HttpServer,
 };
 use dotenv::dotenv;
 use futures::io;
-use handlers::accept_request;
+use handlers::{
+    add_acceptance, assign_accepter, cancel_accepted_request, cancel_unaccepted_request,
+    dismiss_accepter, remove_acceptance, resign_acceptance,
+};
 use mongodb::Client;
 use nb_from_env::{FromEnv, FromEnvDerive};
 use repositories::mongodb::Mongodb;
@@ -51,7 +54,22 @@ async fn main() -> io::Result<()> {
                         "nearby",
                         get().to(handlers::nearby_walk_requests::<Mongodb>),
                     )
-                    .route("/{id}/acceptances", post().to(accept_request::<Mongodb>)),
+                    .route("/{id}/acceptances", post().to(add_acceptance::<Mongodb>))
+                    .route(
+                        "/{id}/acceptances",
+                        delete().to(remove_acceptance::<Mongodb>),
+                    )
+                    .route("/{id}/accepter/{uid}", put().to(assign_accepter::<Mongodb>))
+                    .route(
+                        "/{id}/accepter/{uid}",
+                        delete().to(dismiss_accepter::<Mongodb>),
+                    )
+                    .route("/{id}/resign", delete().to(resign_acceptance::<Mongodb>))
+                    .route(
+                        "/{id}/accepted_by/{uid}",
+                        delete().to(cancel_accepted_request::<Mongodb>),
+                    )
+                    .route("/{id}", delete().to(cancel_unaccepted_request::<Mongodb>)),
             )
     })
     .bind(config.listen_address)
