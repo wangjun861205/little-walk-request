@@ -1,1 +1,1 @@
-url=http://localhost:8005/walk_requests/nearby?longitude=117.00431608470875&latitude=36.66179576496898&radius=100&page=1&size=10
+url=http://localhost:8005/walk_requests/nearby?longitude=116.35432616635083&latitude=37.43745870662479&radius=1000000&page=1&size=10

@@ -1,0 +1,3 @@
+url=http://localhost:8005/walk_requests/656454f83ef1412109bce72d/acceptances
+request=POST
+header=X-User-ID:wangjun
