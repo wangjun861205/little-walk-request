@@ -3,20 +3,22 @@ use anyhow::Error;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::entities::Dog;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WalkRequestCreate {
-    pub dog_ids: Vec<String>,
-    pub should_start_after: DateTime<Utc>,
-    pub should_start_before: DateTime<Utc>,
-    pub should_end_before: DateTime<Utc>,
-    pub should_end_after: DateTime<Utc>,
+    pub dogs: Vec<Dog>,
+    pub should_start_after: Option<DateTime<Utc>>,
+    pub should_start_before: Option<DateTime<Utc>>,
+    pub should_end_before: Option<DateTime<Utc>>,
+    pub should_end_after: Option<DateTime<Utc>>,
     pub latitude: f64,
     pub longitude: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct WalkRequestUpdate {
-    pub dog_ids: Option<Vec<String>>,
+    pub dogs: Option<Vec<Dog>>,
     pub should_start_after: Option<DateTime<Utc>>,
     pub should_start_before: Option<DateTime<Utc>>,
     pub should_end_before: Option<DateTime<Utc>>,

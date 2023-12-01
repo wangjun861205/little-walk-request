@@ -3,9 +3,14 @@ use nb_field_names::FieldNames;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, FieldNames, Default)]
+pub struct Dog {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, FieldNames, Default)]
 pub struct WalkRequest {
     pub id: String,
-    pub dog_ids: Vec<String>,
+    pub dog_ids: Vec<Dog>,
     pub should_start_after: DateTime<Utc>,
     pub should_start_before: DateTime<Utc>,
     pub should_end_after: DateTime<Utc>,

@@ -1,12 +1,12 @@
 use mongodb::bson::oid::ObjectId;
-use mongodb::bson::{from_document, Document};
+use mongodb::bson::{from_document, Bson, Document};
 use mongodb::{
     bson::doc,
     options::{FindOneOptions, FindOptions},
     Database,
 };
 
-use crate::core::entities::WalkRequest;
+use crate::core::entities::{Dog, WalkRequest};
 use crate::core::repository::{Order, Pagination, Repository, SortBy};
 use crate::core::repository::{WalkRequestCreate, WalkRequestQuery, WalkRequestUpdate};
 use anyhow::Error;
@@ -18,7 +18,7 @@ use std::str::FromStr;
 lazy_static! {
     static ref WALK_REQUEST_PROJECTION: Document = doc! {
         "id": {"$toString": "$_id"},
-        "dog_ids": "$dog_ids",
+        "dogs": "$dogs",
         "should_start_after": {"$dateToString": {"date":"$should_start_after", "format": "%Y-%m-%dT%H:%M:%S.%LZ"}},
         "should_start_before": {"$dateToString": {"date":"$should_start_before", "format": "%Y-%m-%dT%H:%M:%S.%LZ"}},
         "should_end_after": {"$dateToString": {"date":"$should_end_after", "format": "%Y-%m-%dT%H:%M:%S.%LZ"}},
@@ -56,10 +56,10 @@ impl TryFrom<WalkRequestQuery> for Document {
             q.insert("_id", ObjectId::from_str(&id)?);
         }
         if let Some(ids) = value.dog_ids_includes_any {
-            q.insert("dog_ids", doc! {"$elemMatch": {"$in": ids }});
+            q.insert("dogs.id", doc! {"$elemMatch": {"$in": ids }});
         }
         if let Some(ids) = value.dog_ids_includes_all {
-            q.insert("dog_ids", doc! {"$all": ids });
+            q.insert("dogs.id", doc! {"$all": ids });
         }
         if let Some(accepted_by) = value.accepted_by {
             q.insert("accepted_by", accepted_by);
@@ -101,8 +101,8 @@ impl TryFrom<WalkRequestQuery> for Document {
 impl From<WalkRequestUpdate> for Document {
     fn from(update: WalkRequestUpdate) -> Self {
         let mut set = doc! {};
-        if let Some(dog_ids) = update.dog_ids {
-            set.insert("dog_ids", dog_ids);
+        if let Some(dogs) = update.dogs {
+            set.insert("dogs", dogs);
         }
         if let Some(accepted_by) = update.accepted_by {
             set.insert("accepted_by", accepted_by);
@@ -149,7 +149,7 @@ impl From<WalkRequestUpdate> for Document {
 impl From<WalkRequestCreate> for Document {
     fn from(value: WalkRequestCreate) -> Self {
         doc! {
-            "dog_ids": value.dog_ids,
+            "dog_ids": value.dogs,
             "should_start_after": value.should_start_after,
             "should_start_before": value.should_start_before,
             "should_end_before": value.should_end_before,
@@ -158,6 +158,22 @@ impl From<WalkRequestCreate> for Document {
             "created_at": Utc::now(),
             "updated_at": Utc::now(),
         }
+    }
+}
+
+impl From<Dog> for Document {
+    fn from(value: Dog) -> Self {
+        doc! {
+            "id": value.id,
+        }
+    }
+}
+
+impl From<Dog> for Bson {
+    fn from(value: Dog) -> Self {
+        Bson::Document(doc! {
+              "id": value.id,
+        })
     }
 }
 
