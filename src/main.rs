@@ -48,28 +48,30 @@ async fn main() -> io::Result<()> {
             .app_data(Data::new(service.clone()))
             .wrap(Logger::new(&log_format))
             .service(
-                scope("walk_requests")
-                    .route("", post().to(handlers::create_walk_request::<Mongodb>))
-                    .route(
-                        "nearby",
-                        get().to(handlers::nearby_walk_requests::<Mongodb>),
-                    )
-                    .route("/{id}/acceptances", post().to(add_acceptance::<Mongodb>))
-                    .route(
-                        "/{id}/acceptances",
-                        delete().to(remove_acceptance::<Mongodb>),
-                    )
-                    .route("/{id}/accepter/{uid}", put().to(assign_accepter::<Mongodb>))
-                    .route(
-                        "/{id}/accepter/{uid}",
-                        delete().to(dismiss_accepter::<Mongodb>),
-                    )
-                    .route("/{id}/resign", delete().to(resign_acceptance::<Mongodb>))
-                    .route(
-                        "/{id}/accepted_by/{uid}",
-                        delete().to(cancel_accepted_request::<Mongodb>),
-                    )
-                    .route("/{id}", delete().to(cancel_unaccepted_request::<Mongodb>)),
+                scope("apis").service(
+                    scope("walk_requests")
+                        .route("", post().to(handlers::create_walk_request::<Mongodb>))
+                        .route(
+                            "nearby",
+                            get().to(handlers::nearby_walk_requests::<Mongodb>),
+                        )
+                        .route("/{id}/acceptances", post().to(add_acceptance::<Mongodb>))
+                        .route(
+                            "/{id}/acceptances",
+                            delete().to(remove_acceptance::<Mongodb>),
+                        )
+                        .route("/{id}/accepter/{uid}", put().to(assign_accepter::<Mongodb>))
+                        .route(
+                            "/{id}/accepter/{uid}",
+                            delete().to(dismiss_accepter::<Mongodb>),
+                        )
+                        .route("/{id}/resign", delete().to(resign_acceptance::<Mongodb>))
+                        .route(
+                            "/{id}/accepted_by/{uid}",
+                            delete().to(cancel_accepted_request::<Mongodb>),
+                        )
+                        .route("/{id}", delete().to(cancel_unaccepted_request::<Mongodb>)),
+                ),
             )
     })
     .bind(config.listen_address)
