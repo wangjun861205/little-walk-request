@@ -10,11 +10,11 @@ pub struct Dog {
 #[derive(Debug, Deserialize, Serialize, FieldNames, Default)]
 pub struct WalkRequest {
     pub id: String,
-    pub dog_ids: Vec<Dog>,
-    pub should_start_after: DateTime<Utc>,
-    pub should_start_before: DateTime<Utc>,
-    pub should_end_after: DateTime<Utc>,
-    pub should_end_before: DateTime<Utc>,
+    pub dogs: Vec<Dog>,
+    pub should_start_after: Option<DateTime<Utc>>,
+    pub should_start_before: Option<DateTime<Utc>>,
+    pub should_end_after: Option<DateTime<Utc>>,
+    pub should_end_before: Option<DateTime<Utc>>,
     pub latitude: f64,
     pub longitude: f64,
     pub distance: Option<f64>,

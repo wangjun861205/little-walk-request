@@ -149,7 +149,7 @@ impl From<WalkRequestUpdate> for Document {
 impl From<WalkRequestCreate> for Document {
     fn from(value: WalkRequestCreate) -> Self {
         doc! {
-            "dog_ids": value.dogs,
+            "dogs": value.dogs,
             "should_start_after": value.should_start_after,
             "should_start_before": value.should_start_before,
             "should_end_before": value.should_end_before,
