@@ -1,15 +1,16 @@
 use mongodb::bson::oid::ObjectId;
 use mongodb::bson::{from_document, Bson, Document};
+use mongodb::options::FindOneAndUpdateOptions;
 use mongodb::{
     bson::doc,
     options::{FindOneOptions, FindOptions},
     Database,
 };
 
-use crate::core::entities::{Dog, WalkRequest};
-use crate::core::repository::{Order, Pagination, Repository, SortBy};
+use crate::core::entities::{Dog, WalkRequest, WalkingLocation};
+use crate::core::repository::{Order, Pagination, Repository, SortBy, WalkingLocationCreate};
 use crate::core::repository::{WalkRequestCreate, WalkRequestQuery, WalkRequestUpdate};
-use anyhow::Error;
+use anyhow::{Context, Error};
 use chrono::Utc;
 use futures::{StreamExt, TryStreamExt};
 use lazy_static::lazy_static;
@@ -18,7 +19,7 @@ use std::str::FromStr;
 lazy_static! {
     static ref WALK_REQUEST_PROJECTION: Document = doc! {
         "id": {"$toString": "$_id"},
-        "dogs": "$dogs",
+        "dog_ids": "$dog_ids",
         "should_start_after": {"$dateToString": {"date":"$should_start_after", "format": "%Y-%m-%dT%H:%M:%S.%LZ"}},
         "should_start_before": {"$dateToString": {"date":"$should_start_before", "format": "%Y-%m-%dT%H:%M:%S.%LZ"}},
         "should_end_after": {"$dateToString": {"date":"$should_end_after", "format": "%Y-%m-%dT%H:%M:%S.%LZ"}},
@@ -26,7 +27,7 @@ lazy_static! {
         "longitude": { "$arrayElemAt": [ "$location.coordinates", 0]},
         "latitude": { "$arrayElemAt": [ "$location.coordinates", 1]},
         "distance": "$distance",
-        "canceled_at": {"$dateToString": {"date":"$accepted_at", "format": "%Y-%m-%dT%H:%M:%S.%LZ"}},
+        "canceled_at": {"$dateToString": {"date":"$canceled_at", "format": "%Y-%m-%dT%H:%M:%S.%LZ"}},
         "accepted_by": "$accepted_by",
         "accepted_at": {"$dateToString": {"date":"$accepted_at", "format": "%Y-%m-%dT%H:%M:%S.%LZ"}},
         "started_at": {"$dateToString": {"date":"$started_at", "format": "%Y-%m-%dT%H:%M:%S.%LZ"}},
@@ -56,10 +57,10 @@ impl TryFrom<WalkRequestQuery> for Document {
             q.insert("_id", ObjectId::from_str(&id)?);
         }
         if let Some(ids) = value.dog_ids_includes_any {
-            q.insert("dogs.id", doc! {"$elemMatch": {"$in": ids }});
+            q.insert("dog_ids", doc! {"$elemMatch": {"$in": ids }});
         }
         if let Some(ids) = value.dog_ids_includes_all {
-            q.insert("dogs.id", doc! {"$all": ids });
+            q.insert("dog_ids", doc! {"$all": ids });
         }
         if let Some(accepted_by) = value.accepted_by {
             q.insert("accepted_by", accepted_by);
@@ -67,8 +68,12 @@ impl TryFrom<WalkRequestQuery> for Document {
         if let Some(accepted_by_neq) = value.accepted_by_neq {
             q.insert("accepted_by", doc! {"$ne": accepted_by_neq });
         }
-        if value.accepted_by_is_null {
-            q.insert("accepted_by", doc! {"$eq": null});
+        if let Some(accepted_by_is_null) = value.accepted_by_is_null {
+            if accepted_by_is_null {
+                q.insert("accepted_by", doc! {"$eq": null});
+            } else {
+                q.insert("accepted_by", doc! {"$neq": null});
+            }
         }
         if let Some(acceptances_includes_all) = value.acceptances_includes_all {
             q.insert("acceptances", doc! {"$all": acceptances_includes_all });
@@ -101,8 +106,8 @@ impl TryFrom<WalkRequestQuery> for Document {
 impl From<WalkRequestUpdate> for Document {
     fn from(update: WalkRequestUpdate) -> Self {
         let mut set = doc! {};
-        if let Some(dogs) = update.dogs {
-            set.insert("dogs", dogs);
+        if let Some(dog_ids) = update.dog_ids {
+            set.insert("dog_ids", dog_ids);
         }
         if let Some(accepted_by) = update.accepted_by {
             set.insert("accepted_by", accepted_by);
@@ -131,6 +136,12 @@ impl From<WalkRequestUpdate> for Document {
         if let Some(add_to_acceptances) = update.add_to_acceptances {
             set.insert("$addToSet", doc! {"acceptances": add_to_acceptances});
         }
+        if let Some(started_at) = update.started_at {
+            set.insert("started_at", started_at);
+        }
+        if let Some(finished_at) = update.finished_at {
+            set.insert("finished_at", finished_at);
+        }
         let mut pull = doc! {};
         if let Some(remove_from_acceptances) = update.remove_from_acceptances {
             pull.insert("acceptances", remove_from_acceptances);
@@ -149,7 +160,7 @@ impl From<WalkRequestUpdate> for Document {
 impl From<WalkRequestCreate> for Document {
     fn from(value: WalkRequestCreate) -> Self {
         doc! {
-            "dogs": value.dogs,
+            "dog_ids": value.dog_ids,
             "should_start_after": value.should_start_after,
             "should_start_before": value.should_start_before,
             "should_end_before": value.should_end_before,
@@ -174,6 +185,18 @@ impl From<Dog> for Bson {
         Bson::Document(doc! {
               "id": value.id,
         })
+    }
+}
+
+impl<'a> From<WalkingLocationCreate<'a>> for Document {
+    fn from(value: WalkingLocationCreate) -> Self {
+        doc! {
+            "walk_request_id": value.walk_request_id,
+            "longitude": value.longitude,
+            "latitude": value.latitude,
+            "created_at": Utc::now(),
+            "updated_at": Utc::now(),
+        }
     }
 }
 
@@ -274,17 +297,38 @@ impl Repository for Mongodb {
         &self,
         id: &str,
         request: WalkRequestUpdate,
-    ) -> Result<u64, Error> {
-        Ok(self
-            .db
-            .collection::<Document>("walk_requests")
-            .update_one(
+    ) -> Result<WalkRequest, Error> {
+        self.db
+            .collection("walk_requests")
+            .find_one_and_update(
                 doc! {"_id": ObjectId::from_str(id)?},
                 Document::from(request),
-                None,
+                FindOneAndUpdateOptions::builder()
+                    .return_document(Some(mongodb::options::ReturnDocument::After))
+                    .projection(WALK_REQUEST_PROJECTION.clone())
+                    .build(),
             )
             .await?
-            .modified_count)
+            .ok_or(Error::msg("代遛请求不存在"))
+    }
+
+    async fn update_walk_request_by_query(
+        &self,
+        query: WalkRequestQuery,
+        update: WalkRequestUpdate,
+    ) -> Result<WalkRequest, Error> {
+        self.db
+            .collection("walk_requests")
+            .find_one_and_update(
+                Document::try_from(query)?,
+                Document::from(update),
+                FindOneAndUpdateOptions::builder()
+                    .return_document(Some(mongodb::options::ReturnDocument::After))
+                    .projection(WALK_REQUEST_PROJECTION.clone())
+                    .build(),
+            )
+            .await?
+            .ok_or(Error::msg("代遛请求不存在"))
     }
 
     async fn update_walk_requests_by_query(
@@ -298,5 +342,17 @@ impl Repository for Mongodb {
             .update_many(Document::try_from(query)?, Document::from(update), None)
             .await?
             .modified_count)
+    }
+
+    async fn create_walking_location<'a>(
+        &self,
+        create: WalkingLocationCreate<'a>,
+    ) -> Result<String, Error> {
+        self.db
+            .collection("walking_locations")
+            .insert_one(Document::from(create), None)
+            .await
+            .map_err(|e| Error::new(e).context("创建Walking定位失败"))
+            .map(|r| r.inserted_id.to_string())
     }
 }

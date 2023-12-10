@@ -10,7 +10,7 @@ pub struct Dog {
 #[derive(Debug, Deserialize, Serialize, FieldNames, Default)]
 pub struct WalkRequest {
     pub id: String,
-    pub dogs: Vec<Dog>,
+    pub dog_ids: Vec<String>,
     pub should_start_after: Option<DateTime<Utc>>,
     pub should_start_before: Option<DateTime<Utc>>,
     pub should_end_after: Option<DateTime<Utc>>,
@@ -27,4 +27,12 @@ pub struct WalkRequest {
     pub acceptances: Option<Vec<String>>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, FieldNames, Default)]
+pub struct WalkingLocation {
+    pub id: String,
+    pub request_id: String,
+    pub longitude: f64,
+    pub latitude: f64,
 }

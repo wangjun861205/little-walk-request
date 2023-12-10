@@ -2,10 +2,14 @@ use std::default;
 
 use super::{
     entities::WalkRequest,
-    repository::{Pagination, Repository, WalkRequestCreate, WalkRequestQuery, WalkRequestUpdate},
+    repository::{
+        Pagination, Repository, WalkRequestCreate, WalkRequestQuery, WalkRequestUpdate,
+        WalkingLocationCreate,
+    },
 };
 use anyhow::Error;
 use chrono::{DateTime, Utc};
+use serde::Deserialize;
 
 #[derive(Debug, Clone)]
 pub struct Service<R>
@@ -46,6 +50,7 @@ where
         self.repository
             .query_walk_requests(
                 WalkRequestQuery {
+                    accepted_by_is_null: Some(true),
                     nearby: Some(vec![longitude, latitute, radius]),
                     ..Default::default()
                 },
@@ -55,26 +60,21 @@ where
             .await
     }
 
-    pub async fn add_acceptance(&self, request_id: &str, user_id: &str) -> Result<(), Error> {
+    pub async fn accept(&self, request_id: &str, user_id: &str) -> Result<WalkRequest, Error> {
         self.repository
-            .update_walk_requests_by_query(
+            .update_walk_request_by_query(
                 WalkRequestQuery {
-                    id: Some(request_id.to_owned()),
+                    id: Some(request_id.into()),
+                    accepted_by_is_null: Some(true),
                     ..Default::default()
                 },
                 WalkRequestUpdate {
-                    add_to_acceptances: Some(user_id.to_owned()),
+                    accepted_by: Some(user_id.to_owned()),
+                    accepted_at: Some(Utc::now()),
                     ..Default::default()
                 },
             )
             .await
-            .and_then(|n| {
-                if n == 1 {
-                    Ok(())
-                } else {
-                    Err(Error::msg("请求不存在"))
-                }
-            })
     }
 
     pub async fn remove_acceptance(&self, request_id: &str, user_id: &str) -> Result<(), Error> {
@@ -105,7 +105,7 @@ where
             .update_walk_requests_by_query(
                 WalkRequestQuery {
                     id: Some(request_id.to_owned()),
-                    accepted_by_is_null: true,
+                    accepted_by_is_null: Some(true),
                     acceptances_includes_all: Some(vec![user_id.to_owned()]),
                     ..Default::default()
                 },
@@ -154,7 +154,7 @@ where
             .update_walk_requests_by_query(
                 WalkRequestQuery {
                     id: Some(request_id.to_owned()),
-                    accepted_by_is_null: true,
+                    accepted_by_is_null: Some(true),
                     ..Default::default()
                 },
                 WalkRequestUpdate {
@@ -222,5 +222,52 @@ where
                     Err(Error::msg("请求不存在或已被狗狗主人取消"))
                 }
             })
+    }
+
+    pub async fn start_walk(&self, request_id: &str, user_id: &str) -> Result<WalkRequest, Error> {
+        self.repository
+            .update_walk_request_by_query(
+                WalkRequestQuery {
+                    id: Some(request_id.to_owned()),
+                    accepted_by: Some(user_id.to_owned()),
+                    ..Default::default()
+                },
+                WalkRequestUpdate {
+                    started_at: Some(Utc::now()),
+                    ..Default::default()
+                },
+            )
+            .await
+    }
+
+    pub async fn record_walking_location(
+        &self,
+        walk_request_id: &str,
+        longitude: f64,
+        latitute: f64,
+    ) -> Result<String, Error> {
+        self.repository
+            .create_walking_location(WalkingLocationCreate {
+                walk_request_id,
+                longitude,
+                latitude: latitute,
+            })
+            .await
+    }
+
+    pub async fn finish_walk(&self, request_id: &str, user_id: &str) -> Result<WalkRequest, Error> {
+        self.repository
+            .update_walk_request_by_query(
+                WalkRequestQuery {
+                    id: Some(request_id.to_owned()),
+                    accepted_by: Some(user_id.to_owned()),
+                    ..Default::default()
+                },
+                WalkRequestUpdate {
+                    finished_at: Some(Utc::now()),
+                    ..Default::default()
+                },
+            )
+            .await
     }
 }

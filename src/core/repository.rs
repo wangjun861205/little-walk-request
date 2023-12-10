@@ -3,11 +3,9 @@ use anyhow::Error;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::entities::Dog;
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WalkRequestCreate {
-    pub dogs: Vec<Dog>,
+    pub dog_ids: Vec<String>,
     pub should_start_after: Option<DateTime<Utc>>,
     pub should_start_before: Option<DateTime<Utc>>,
     pub should_end_before: Option<DateTime<Utc>>,
@@ -18,7 +16,7 @@ pub struct WalkRequestCreate {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct WalkRequestUpdate {
-    pub dogs: Option<Vec<Dog>>,
+    pub dog_ids: Option<Vec<String>>,
     pub should_start_after: Option<DateTime<Utc>>,
     pub should_start_before: Option<DateTime<Utc>>,
     pub should_end_before: Option<DateTime<Utc>>,
@@ -28,6 +26,8 @@ pub struct WalkRequestUpdate {
     pub accepted_by: Option<String>,
     pub accepted_at: Option<DateTime<Utc>>,
     pub canceled_at: Option<DateTime<Utc>>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub finished_at: Option<DateTime<Utc>>,
     pub unset_accepted_by: bool,
     pub unset_accepted_at: bool,
     pub add_to_acceptances: Option<String>,
@@ -42,9 +42,15 @@ pub struct WalkRequestQuery {
     pub nearby: Option<Vec<f64>>,
     pub accepted_by: Option<String>,
     pub accepted_by_neq: Option<String>,
-    pub accepted_by_is_null: bool,
+    pub accepted_by_is_null: Option<bool>,
     pub acceptances_includes_all: Option<Vec<String>>,
     pub acceptances_includes_any: Option<Vec<String>>,
+}
+
+pub struct WalkingLocationCreate<'a> {
+    pub walk_request_id: &'a str,
+    pub longitude: f64,
+    pub latitude: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -73,8 +79,16 @@ impl Pagination {
 
 pub trait Repository {
     async fn create_walk_request(&self, request: WalkRequestCreate) -> Result<String, Error>;
-    async fn update_walk_request(&self, id: &str, request: WalkRequestUpdate)
-        -> Result<u64, Error>;
+    async fn update_walk_request(
+        &self,
+        id: &str,
+        request: WalkRequestUpdate,
+    ) -> Result<WalkRequest, Error>;
+    async fn update_walk_request_by_query(
+        &self,
+        query: WalkRequestQuery,
+        update: WalkRequestUpdate,
+    ) -> Result<WalkRequest, Error>;
     async fn update_walk_requests_by_query(
         &self,
         query: WalkRequestQuery,
@@ -87,4 +101,6 @@ pub trait Repository {
         sort_by: Option<SortBy>,
         pagination: Option<Pagination>,
     ) -> Result<Vec<WalkRequest>, Error>;
+    async fn create_walking_location(&self, create: WalkingLocationCreate)
+        -> Result<String, Error>;
 }

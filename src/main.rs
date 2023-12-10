@@ -13,8 +13,8 @@ use actix_web::{
 use dotenv::dotenv;
 use futures::io;
 use handlers::{
-    add_acceptance, assign_accepter, cancel_accepted_request, cancel_unaccepted_request,
-    dismiss_accepter, remove_acceptance, resign_acceptance,
+    accept, assign_accepter, cancel_accepted_request, cancel_unaccepted_request, dismiss_accepter,
+    finish_walk, record_walking_location, remove_acceptance, resign_acceptance, start_walk,
 };
 use mongodb::Client;
 use nb_from_env::{FromEnv, FromEnvDerive};
@@ -55,7 +55,7 @@ async fn main() -> io::Result<()> {
                             "nearby",
                             get().to(handlers::nearby_walk_requests::<Mongodb>),
                         )
-                        .route("/{id}/acceptances", post().to(add_acceptance::<Mongodb>))
+                        .route("/{id}/accepted_by", put().to(accept::<Mongodb>))
                         .route(
                             "/{id}/acceptances",
                             delete().to(remove_acceptance::<Mongodb>),
@@ -70,7 +70,13 @@ async fn main() -> io::Result<()> {
                             "/{id}/accepted_by/{uid}",
                             delete().to(cancel_accepted_request::<Mongodb>),
                         )
-                        .route("/{id}", delete().to(cancel_unaccepted_request::<Mongodb>)),
+                        .route("/{id}", delete().to(cancel_unaccepted_request::<Mongodb>))
+                        .route("/{id}/start", put().to(start_walk::<Mongodb>))
+                        .route("/{id}/finish", put().to(finish_walk::<Mongodb>))
+                        .route(
+                            "/{id}/locations",
+                            post().to(record_walking_location::<Mongodb>),
+                        ),
                 ),
             )
     })
