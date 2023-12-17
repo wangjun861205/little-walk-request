@@ -1,22 +1,29 @@
 use crate::core::entities::WalkRequest;
 use anyhow::Error;
 use chrono::{DateTime, Utc};
+use little_walk_dog::core::entities::Dog;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WalkRequestCreate {
-    pub dog_ids: Vec<String>,
+    pub dogs: Vec<Dog>,
     pub should_start_after: Option<DateTime<Utc>>,
     pub should_start_before: Option<DateTime<Utc>>,
     pub should_end_before: Option<DateTime<Utc>>,
     pub should_end_after: Option<DateTime<Utc>>,
     pub latitude: f64,
     pub longitude: f64,
+    #[serde(default = "empty_string")]
+    pub created_by: String,
+}
+
+fn empty_string() -> String {
+    String::new()
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct WalkRequestUpdate {
-    pub dog_ids: Option<Vec<String>>,
+    pub dogs: Option<Vec<Dog>>,
     pub should_start_after: Option<DateTime<Utc>>,
     pub should_start_before: Option<DateTime<Utc>>,
     pub should_end_before: Option<DateTime<Utc>>,
@@ -45,6 +52,7 @@ pub struct WalkRequestQuery {
     pub accepted_by_is_null: Option<bool>,
     pub acceptances_includes_all: Option<Vec<String>>,
     pub acceptances_includes_any: Option<Vec<String>>,
+    pub created_by: Option<String>,
 }
 
 pub struct WalkingLocationCreate<'a> {

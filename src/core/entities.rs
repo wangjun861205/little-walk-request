@@ -1,16 +1,12 @@
 use chrono::{DateTime, Utc};
+use little_walk_dog::core::entities::Dog;
 use nb_field_names::FieldNames;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, FieldNames, Default)]
-pub struct Dog {
-    pub id: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, FieldNames, Default)]
 pub struct WalkRequest {
     pub id: String,
-    pub dog_ids: Vec<String>,
+    pub dogs: Vec<Dog>,
     pub should_start_after: Option<DateTime<Utc>>,
     pub should_start_before: Option<DateTime<Utc>>,
     pub should_end_after: Option<DateTime<Utc>>,

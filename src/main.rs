@@ -55,6 +55,7 @@ async fn main() -> io::Result<()> {
                             "nearby",
                             get().to(handlers::nearby_walk_requests::<Mongodb>),
                         )
+                        .route("mine", get().to(handlers::my_walk_requests::<Mongodb>))
                         .route("/{id}/accepted_by", put().to(accept::<Mongodb>))
                         .route(
                             "/{id}/acceptances",

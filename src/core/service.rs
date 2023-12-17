@@ -3,8 +3,8 @@ use std::default;
 use super::{
     entities::WalkRequest,
     repository::{
-        Pagination, Repository, WalkRequestCreate, WalkRequestQuery, WalkRequestUpdate,
-        WalkingLocationCreate,
+        Order, Pagination, Repository, SortBy, WalkRequestCreate, WalkRequestQuery,
+        WalkRequestUpdate, WalkingLocationCreate,
     },
 };
 use anyhow::Error;
@@ -55,6 +55,26 @@ where
                     ..Default::default()
                 },
                 None,
+                Some(pagination),
+            )
+            .await
+    }
+
+    pub async fn my_walk_requests(
+        &self,
+        user_id: &str,
+        pagination: Pagination,
+    ) -> Result<Vec<WalkRequest>, Error> {
+        self.repository
+            .query_walk_requests(
+                WalkRequestQuery {
+                    created_by: Some(user_id.to_owned()),
+                    ..Default::default()
+                },
+                Some(SortBy {
+                    field: WalkRequest::created_at(),
+                    order: Order::Desc,
+                }),
                 Some(pagination),
             )
             .await

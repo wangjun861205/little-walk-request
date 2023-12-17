@@ -32,11 +32,13 @@ impl FromRequest for UserID {
 
 pub(crate) async fn create_walk_request<R>(
     service: Data<Service<R>>,
-    Json(body): Json<WalkRequestCreate>,
+    UserID(user_id): UserID,
+    Json(mut body): Json<WalkRequestCreate>,
 ) -> Result<HttpResponse>
 where
     R: Repository + Clone,
 {
+    body.created_by = user_id;
     service
         .create_walk_request(body)
         .await
@@ -67,6 +69,21 @@ where
             params.radius,
             Pagination::new(params.page, params.size),
         )
+        .await
+        .map_err(ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().json(walk_requests))
+}
+
+pub(crate) async fn my_walk_requests<R>(
+    service: Data<Service<R>>,
+    UserID(user_id): UserID,
+    Query(pagination): Query<Pagination>,
+) -> Result<HttpResponse>
+where
+    R: Repository + Clone,
+{
+    let walk_requests = service
+        .my_walk_requests(&user_id, Pagination::new(pagination.page, pagination.size))
         .await
         .map_err(ErrorInternalServerError)?;
     Ok(HttpResponse::Ok().json(walk_requests))
